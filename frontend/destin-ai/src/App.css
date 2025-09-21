@@ -36,11 +36,12 @@ body, html, #root {
   padding: 10px; /* bigger */
   cursor: pointer;
   transition: background 0.3s ease, transform 0.2s ease;
+  background-color: #1c1c1c;
   
 }
 
 .download-btn:hover {
-  
+  background-color: #1c1c1c;
   transform: scale(1.07);
 }
 
@@ -77,6 +78,7 @@ body, html, #root {
   background: #338a84;
   color: #fff;
   align-self: flex-end;
+  
 }
 
 /* Input */
@@ -134,3 +136,4 @@ button:hover {
     font-size: 1.2rem;
   }
 }
+

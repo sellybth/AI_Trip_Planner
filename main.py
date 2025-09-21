@@ -1,8 +1,8 @@
 # main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from typing import List, Union, Dict, Any
 import json
 
 # Routers
@@ -21,7 +21,7 @@ app = FastAPI(
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For dev; set to your React URL in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,20 +37,49 @@ def root():
     return {"message": "DestinAI backend is running."}
 
 # ---------------- Chat Endpoint ----------------
+
+class MessagePart(BaseModel):
+    text: str
+
+class HistoryMessage(BaseModel):
+    role: str
+    parts: List[MessagePart] # Ensure parts are always objects with 'text'
+
 class ChatRequest(BaseModel):
     message: str
-    history: List[dict] = []
+    history: List[HistoryMessage] = Field(default_factory=list)
 
 @app.post("/chat")
 def chat_endpoint(request: ChatRequest):
     try:
         print("Received message:", request.message)
 
+        # Convert the incoming history to the format expected by genai.GenerativeModel
+        # This history will contain all *previous* messages (user and model)
+        formatted_history = []
+        for msg in request.history:
+            formatted_parts = []
+            for part in msg.parts: # msg.parts is already List[MessagePart]
+                formatted_parts.append({"text": part.text}) # Ensure it's a dict for genai
+
+            formatted_history.append({
+                "role": msg.role,
+                "parts": formatted_parts
+            })
+
         # Initialize AI model with tools
         system_instruction_text = (
             "You are a helpful and efficient AI trip planner assistant. "
-            "Format outputs clearly. Use find_flights, get_hotels, or build_itinerary tools "
-            "to fetch information via the FastAPI backend and summarize results for the user."
+            "Your goal is to assist users in planning their trips by finding flights, hotels, and building itineraries. "
+            "When a user asks for travel information, you should use the available tools to find the requested details. "
+            "If information is given in a previous prompt do not ask the user to repeat it."
+            "do not give the user direct api json response. try to format it in a user friendly and human way for ease of understanding."
+            "Extract the key information from the API response and present it clearly to the user."
+          
+            "Summarize the flight details, hotel options, or itinerary points concisely."
+            "if the user asks for a combined response of a full or any combinations of the tools. call the apis and fetch details or use the ones called before"
+            "Always try to gather enough information from the user (e.g., origin, destination, dates, location, days) "
+            "before making a tool call. Be polite and informative."
         )
 
         model = genai.GenerativeModel(
@@ -59,9 +88,14 @@ def chat_endpoint(request: ChatRequest):
             system_instruction=system_instruction_text
         )
 
-        # Start stateless chat session with optional history
-        chat = model.start_chat(history=request.history or [])
+        # Start chat session with the *previous* conversation history
+        # The current user message will be passed separately to send_message
+        chat = model.start_chat(history=formatted_history)
+
+        # --- CRITICAL CHANGE HERE ---
+        # Pass the current user's message to chat.send_message()
         response = chat.send_message(request.message)
+
 
         # ---------------- Safe function call check ----------------
         function_call = None
@@ -98,6 +132,8 @@ def chat_endpoint(request: ChatRequest):
 
     except Exception as e:
         print("Error in /chat endpoint:", e)
+        import traceback
+        traceback.print_exc()
         return {"response": f"Error occurred: {e}"}
 
 # ---------------- Run Uvicorn ----------------
