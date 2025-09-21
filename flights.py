@@ -58,6 +58,7 @@ def find_flights(req: FlightRequest):
         "cabin_class": "ECONOMY",
         "currency": "INR",
         "locale": "en-gb",
+        "stops": 0,
         "adults": 1
     }
     resp = requests.get(booking_url_flight, headers=headers, params=params)
@@ -83,6 +84,5 @@ def find_flights(req: FlightRequest):
                 'flight_cost':cost
         })
     # Print or further process the 'results' list
-    import json
-    return json.dumps(results)
+    return results
 
