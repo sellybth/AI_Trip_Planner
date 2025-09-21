@@ -2,7 +2,7 @@ import os
 import requests
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +16,10 @@ router_flights = APIRouter()
 class FlightRequest(BaseModel):
     origin: str
     destination: str
-    depart_date: str
+    departure_date: str # Change to match the tool definition
+    # You'll also need to add return_date if you want to support it in the FastAPI endpoint
+    return_date: Optional[str] = None # Add this
+    adults: Optional[int] = 1
 
 def flight_location(city:str):
     headers = {
@@ -52,13 +55,14 @@ def find_flights(req: FlightRequest):
     params = {
         "from_code": origin,
         "to_code": destination,
-        "depart_date": req.depart_date,
-        "flight_type": "ONEWAY",
+        "depart_date": req.departure_date, # Use req.departure_date
+        "flight_type": "ROUNDTRIP" if req.return_date else "ONEWAY", # Dynamic flight_type
         "order_by": "BEST",
         "cabin_class": "ECONOMY",
         "currency": "INR",
         "locale": "en-gb",
-        "adults": 1
+        "stops": "0",
+        "adults": req.adults
     }
     resp = requests.get(booking_url_flight, headers=headers, params=params)
     if resp.status_code != 200:
@@ -82,7 +86,6 @@ def find_flights(req: FlightRequest):
                 'flightnum':flight_num,
                 'flight_cost':cost
         })
-    # Print or further process the 'results' list
-    import json
-    return json.dumps(results)
+    
+    return results
 
