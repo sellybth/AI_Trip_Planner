@@ -1,0 +1,136 @@
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', 'Arial', sans-serif;
+  background-color: #121212; /* Dark background */
+  color: #e0e0e0;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 36px; /* bigger */
+  background: #1c1c1c;
+  border-bottom: 1px solid #2c2c2c;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo h1 {
+  font-size: 1.5rem; /* bigger */
+  font-weight: bold;
+  color: #338a84; /* brand color */
+}
+
+.download-btn {
+  padding: 10px; /* bigger */
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  
+}
+
+.download-btn:hover {
+  
+  transform: scale(1.07);
+}
+
+/* Chat container */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 850px; /* slightly wider */
+  margin: 40px auto;
+  background: #1c1c1c;
+  border-radius: 14px;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.5);
+  padding: 24px; /* more breathing room */
+}
+
+/* Chat messages */
+.chat-message {
+  padding: 14px 18px; /* bigger bubbles */
+  border-radius: 20px;
+  margin-bottom: 14px;
+  max-width: 78%;
+  line-height: 1.6;
+  font-size: 1rem; /* up from 0.95 */
+  animation: fadeIn 0.3s ease;
+}
+
+.chat-message.bot {
+  background: #2c2c2c;
+  align-self: flex-start;
+ 
+}
+
+.chat-message.user {
+  background: #338a84;
+  color: #fff;
+  align-self: flex-end;
+}
+
+/* Input */
+.input-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+input {
+  flex: 1;
+  padding: 14px; /* bigger input */
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #2c2c2c;
+  color: #e0e0e0;
+  font-size: 1rem;
+  outline: none;
+}
+
+input:focus {
+  border-color: #338a84;
+}
+
+button {
+  padding: 14px 20px; /* bigger button */
+  border-radius: 12px;
+  border: none;
+  background: #338a84;
+  font-size: 1rem;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background: #2aa39b;
+  transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+/* Responsive */
+@media(max-width: 768px) {
+  .chat-container {
+    margin: 18px;
+    padding: 18px;
+  }
+
+  .logo h1 {
+    font-size: 1.2rem;
+  }
+}

@@ -2,7 +2,7 @@ import os
 import requests
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +16,10 @@ router_flights = APIRouter()
 class FlightRequest(BaseModel):
     origin: str
     destination: str
-    depart_date: str
+    departure_date: str # Change to match the tool definition
+    # You'll also need to add return_date if you want to support it in the FastAPI endpoint
+    return_date: Optional[str] = None # Add this
+    adults: Optional[int] = 1
 
 def flight_location(city:str):
     headers = {
@@ -38,7 +41,6 @@ def flight_location(city:str):
 
 @router_flights.post("/find_flights")
 def find_flights(req: FlightRequest):
-    
     origin = flight_location(req.origin)
     destination = flight_location(req.destination)
 
@@ -47,42 +49,57 @@ def find_flights(req: FlightRequest):
     
     headers = {
         "x-rapidapi-key": BOOKING_API_KEY,
-	    "x-rapidapi-host": "booking-com.p.rapidapi.com"
+        "x-rapidapi-host": "booking-com.p.rapidapi.com"
     }
     params = {
         "from_code": origin,
         "to_code": destination,
-        "depart_date": req.depart_date,
-        "flight_type": "ONEWAY",
+        "depart_date": req.departure_date,
+        "flight_type": "ROUNDTRIP" if req.return_date else "ONEWAY",
         "order_by": "BEST",
         "cabin_class": "ECONOMY",
         "currency": "INR",
         "locale": "en-gb",
-        "stops": 0,
-        "adults": 1
+        "stops": "0",
+        "adults": req.adults or 1
     }
     resp = requests.get(booking_url_flight, headers=headers, params=params)
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail="Flight API error")
+    
     data = resp.json()
-    flights = data.get('flightOffers', data)  # adapt if your root is not 'flights'
+    flights = data.get('flightOffers', data)
     results = []
+
     for flight in flights:
+        flight_info = {
+            "segments": [],
+            "flight_cost": flight.get('priceBreakdown', {}).get('total', {}).get('units')
+        }
         for segment in flight.get('segments', []):
-            depart_time = segment.get('departureTime')
-            arrive_time = segment.get('arrivalTime')
+            segment_info = {
+                "depart_time": segment.get('departureTime'),
+                "arrive_time": segment.get('arrivalTime'),
+                "legs": []
+            }
             for leg in segment.get('legs', []):
-                for carrier in leg.get("carriersData", []):
-                    airline=carrier.get("name")
-            flight_num = leg.get('flightInfo', {}).get('flightNumber')
-        cost = flight.get('priceBreakdown', {}).get('total', {}).get('units')
-        results.append({
-                'depart_time': depart_time,
-                'arrive_time': arrive_time,
-                'airline': airline,
-                'flightnum':flight_num,
-                'flight_cost':cost
-        })
-    # Print or further process the 'results' list
-    return results
+                try:
+                    airline = None
+                    flight_num = None
+                    carriers = leg.get("carriersData", [])
+                    if carriers:
+                        airline = carriers[0].get("name")
+                    flight_num = leg.get('flightInfo', {}).get('flightNumber')
+
+                    leg_info = {
+                        "airline": airline,
+                        "flight_num": flight_num
+                    }
+                    segment_info["legs"].append(leg_info)
+                except Exception as e:
+                    print("Error parsing leg:", e)
+            flight_info["segments"].append(segment_info)
+        results.append(flight_info)
+    
+    return {"flights": results}
 
